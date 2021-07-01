@@ -1,6 +1,6 @@
 # Description
 
-Playground to scaffold out presence architecture
+Playground to scaffold out presence architecture.
 
 ## Backend
 
