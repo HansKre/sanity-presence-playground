@@ -1,22 +1,18 @@
-import React, {useState, useEffect, ChangeEvent, ChangeEventHandler} from 'react';
-import SocketMesssage from '../types/SocketMessage';
-
+import React, {useState, useEffect, useContext, ChangeEvent, ChangeEventHandler} from 'react';
+import PresenceContext from '../providers/PresenceContext';
 import SocketMessage from '../types/SocketMessage';
 
 interface Props {
-    ws: WebSocket | undefined;
     clientId: string | undefined;
 }
 
 export default function Users(props: Props) {
 
-    const {ws, clientId} = props;
+    const {clientId} = props;
 
     const [myName, setMyName] = useState<string>('')
 
-    useEffect(() => {
-        //
-    }, []);
+    const presence = useContext(PresenceContext);
 
     const handleIncomingMsg = (evt: MessageEvent) => {
         try {
@@ -32,12 +28,12 @@ export default function Users(props: Props) {
     const handleChange = (evt: ChangeEvent<HTMLInputElement>): ChangeEventHandler<HTMLInputElement> | undefined => {
         const newVal = evt.target.value;
 
-        const socketMsg: SocketMesssage = {
+        const socketMsg: SocketMessage = {
             clientId,
             newVal,
             fieldName: 'myName'
         }
-        ws?.send(JSON.stringify(socketMsg));
+        presence?.next(socketMsg);
 
         setMyName(newVal);
 

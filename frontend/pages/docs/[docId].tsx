@@ -1,8 +1,11 @@
 import React, {useState, useEffect, ChangeEventHandler, ChangeEvent} from 'react';
 import {useRouter} from 'next/router';
 import {nanoid} from 'nanoid';
+import {webSocket, WebSocketSubject} from "rxjs/webSocket";
 
 import Users from '../../components/Users';
+import PresenceContext from '../../providers/PresenceContext';
+import SocketMessage from '../../types/SocketMessage';
 
 const SERVER_URL = 'ws://localhost:8080';
 
@@ -13,35 +16,34 @@ export default function Document() {
 
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
-  const [ws, setWs] = useState<WebSocket>();
   const [clientId, setClientId] = useState<string>();
+  const [presence, setPresence] = useState<WebSocketSubject<unknown>>();
 
   useEffect(() => {
     if (docId) {
       // init client id
       setClientId(nanoid());
-      // create websocket
-      const _ws = new WebSocket(`${SERVER_URL}/?docid=${docId}`);
-      // subscribe to incoming messages
-      _ws.onmessage = handleIncomingMsg;
-      setWs(_ws);
-      console.log('New ws connection established');
+      // create websocket as observeable subject
+      const subject = webSocket(`${SERVER_URL}/?docid=${docId}`);
+      // configure subscription
+      subject.subscribe({
+        next: (jsonMsg) => handleIncomingMsg(jsonMsg as SocketMessage),
+        error: (err) => console.log(err),
+        complete: () => console.log('connection is closed')
+      });
+      setPresence(subject);
       return () => {
-        // cleanup
-        _ws.close();
-        setWs(undefined);
+        // unset the state-reference
+        setPresence(undefined);
+        // Closes the connection
+        subject.complete();
       }
     }
   }, [docId]);
 
-  const handleIncomingMsg = (evt: MessageEvent) => {
-    try {
-      const msg = JSON.parse(evt.data)
-      if (msg?.clientId !== clientId) {
-        setField(msg.fieldName, msg.newVal);
-      }
-    } catch (error) {
-      console.log({error, data: evt.data});
+  const handleIncomingMsg = (data: SocketMessage) => {
+    if (data?.clientId !== clientId) {
+      setField(data.fieldName, data.newVal);
     }
   }
 
@@ -53,7 +55,8 @@ export default function Document() {
       newVal,
       fieldName
     }
-    ws?.send(JSON.stringify(socketMsg));
+
+    presence?.next(socketMsg);
 
     setField(fieldName, newVal);
 
@@ -83,7 +86,9 @@ export default function Document() {
         <label>Last name:</label>
         <input type="text" value={lastName} onChange={(evt) => handleChange(evt, 'lastName')} />
       </div>
-      <Users ws={ws} clientId={clientId} />
+      <PresenceContext.Provider value={presence}>
+        <Users clientId={clientId} />
+      </PresenceContext.Provider>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-export default interface SocketMesssage {
+export default interface SocketMessage {
     clientId: string | undefined;
     newVal: string;
     fieldName: string

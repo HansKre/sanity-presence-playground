@@ -64,7 +64,7 @@ webSocket.on("request", request => {
         // send success message to the new connected client
         // setTimeout to give client to set:
         // ws.onmessage = message => console.log(message)
-        setTimeout(() => newClientConnection.send(`Connected successfully to server ${APPID}`), 10000);
+        setTimeout(() => newClientConnection.send(JSON.stringify({ message: `Connected successfully to server ${APPID}` })), 10000);
         clientConnections.push(newClientConnection);
         console.log({ keyStore });
         keyStore.forEach(key => publisher.get(key, (err, reply) => {
